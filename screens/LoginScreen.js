@@ -36,6 +36,7 @@ const GITHUB_CLIENT_SECRET = 'cbc07940e687be47896e6ab1d42dfcc95af374df';
 export default function LoginScreen({ onBack, language = 'id', changeLanguage }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [secureText, setSecureText] = useState(true);
   const [isRegistering, setIsRegistering] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -282,16 +283,27 @@ export default function LoginScreen({ onBack, language = 'id', changeLanguage })
             </View>
 
             <Text style={[styles.inputLabel, { marginTop: 16 }]}>{translations[language].password}</Text>
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { flex: 1, paddingRight: 8 }]}
                 placeholder="••••••••"
                 placeholderTextColor="#94a3b8"
-                secureTextEntry
+                secureTextEntry={secureText}
                 autoCapitalize="none"
                 value={password}
                 onChangeText={setPassword}
               />
+              <TouchableOpacity
+                onPress={() => setSecureText(!secureText)}
+                activeOpacity={0.7}
+                style={{ padding: 4 }}
+              >
+                <Ionicons
+                  name={secureText ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color="#94a3b8"
+                />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.helperLinksContainer}>

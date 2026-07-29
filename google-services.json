@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "224132583967-jg354mdl5ma68dv42evink412qiglj1o.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mentora.app",
+            "certificate_hash": "14ed592f7d80b9c6464acfc42d85035fcb500dec"
+          }
+        },
+        {
           "client_id": "224132583967-5q8tjjhn8nv2rbuv2na4bsaeh7p6l2ku.apps.googleusercontent.com",
           "client_type": 3
         }

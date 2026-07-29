@@ -29,7 +29,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const logoImage = require('../../assets/LOGO.jpeg');
 
-const MessageItem = React.memo(({ item, isDark, isSearchActive, searchQuery, onImagePress }) => {
+const MessageItem = React.memo(({ item, isDark, isSearchActive, searchQuery, onImagePress, isActiveMatch }) => {
   const isUser = item.sender === 'user';
   const themeBubbleAi = isDark
     ? { backgroundColor: '#1e1e24', borderColor: '#27272a', borderWidth: Platform.OS === 'android' ? 1 : 0 }
@@ -55,7 +55,7 @@ const MessageItem = React.memo(({ item, isDark, isSearchActive, searchQuery, onI
         return (
           <Text
             key={segObj.id}
-            style={isUser ? styles.highlightUser : styles.highlightAi}
+            style={isActiveMatch ? styles.highlightActive : (isUser ? styles.highlightUser : styles.highlightAi)}
           >
             {segObj.content}
           </Text>
@@ -531,19 +531,34 @@ function ChatHeader({ isSearchActive, theme, onMenuPress, onSearchToggle }) {
   );
 }
 
-function SearchBar({ show, theme, searchInputRef, language, value, onChange }) {
+function SearchBar({ show, theme, searchInputRef, language, value, onChange, onNext, onPrev, currentMatch, matchCount }) {
   if (!show) return null;
   return (
-    <View style={[styles.searchBarContainer, theme.searchContainer]}>
-      <TextInput
-        ref={searchInputRef}
-        style={[styles.searchInput, theme.input]}
-        placeholder={translations[language].searchConversation}
-        placeholderTextColor="#94a3b8"
-        value={value}
-        onChangeText={onChange}
-        autoFocus
-      />
+    <View style={[styles.searchBarContainer, theme.searchContainer, { flexDirection: 'row', alignItems: 'center' }]}>
+      <View style={{ flex: 1, position: 'relative', justifyContent: 'center' }}>
+        <TextInput
+          ref={searchInputRef}
+          style={[styles.searchInput, theme.input, { paddingRight: value.trim().length > 0 ? 80 : 16 }]}
+          placeholder={translations[language].searchConversation}
+          placeholderTextColor="#94a3b8"
+          value={value}
+          onChangeText={onChange}
+          autoFocus
+        />
+      </View>
+      {value.trim().length > 0 && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8, gap: 4 }}>
+          <Text style={{ fontSize: 13, color: '#64748b', fontWeight: '600' }}>
+            {matchCount > 0 ? `${currentMatch}/${matchCount}` : '0/0'}
+          </Text>
+          <TouchableOpacity onPress={onPrev} disabled={matchCount === 0} style={{ padding: 6, opacity: matchCount === 0 ? 0.4 : 1 }}>
+            <Ionicons name="chevron-back" size={20} color={theme.iconColor || '#0f172a'} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onNext} disabled={matchCount === 0} style={{ padding: 6, opacity: matchCount === 0 ? 0.4 : 1 }}>
+            <Ionicons name="chevron-forward" size={20} color={theme.iconColor || '#0f172a'} />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -655,6 +670,40 @@ function useChatStateAndHandlers({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+
+  const getMatchIndexes = useCallback(() => {
+    if (!isSearchActive || !searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    const idxs = [];
+    messages.forEach((msg, idx) => {
+      if (msg.text && msg.text.toLowerCase().includes(query)) {
+        idxs.push(idx);
+      }
+    });
+    return idxs;
+  }, [isSearchActive, searchQuery, messages]);
+
+  useEffect(() => {
+    setCurrentMatchIndex(0);
+  }, [searchQuery]);
+
+  const handleSearchNext = () => {
+    const matchIndexes = getMatchIndexes();
+    if (matchIndexes.length === 0) return;
+    const nextIndex = (currentMatchIndex + 1) % matchIndexes.length;
+    setCurrentMatchIndex(nextIndex);
+    flatListRef.current?.scrollToIndex({ index: matchIndexes[nextIndex], animated: true, viewPosition: 0.5 });
+  };
+
+  const handleSearchPrev = () => {
+    const matchIndexes = getMatchIndexes();
+    if (matchIndexes.length === 0) return;
+    const prevIndex = (currentMatchIndex - 1 + matchIndexes.length) % matchIndexes.length;
+    setCurrentMatchIndex(prevIndex);
+    flatListRef.current?.scrollToIndex({ index: matchIndexes[prevIndex], animated: true, viewPosition: 0.5 });
+  };
+
   const { height: windowHeight } = useWindowDimensions();
   const screenHeight = Dimensions.get('screen').height;
   const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -1003,20 +1052,22 @@ function useChatStateAndHandlers({
     };
   }, []);
 
-  const renderMessageItem = useCallback(({ item }) => (
-    <MessageItem
-      item={item}
-      isDark={isDark}
-      isSearchActive={isSearchActive}
-      searchQuery={searchQuery}
-      onImagePress={setSelectedImage}
-    />
-  ), [isDark, isSearchActive, searchQuery]);
+  const renderMessageItem = useCallback(({ item, index }) => {
+    const matchIndexes = getMatchIndexes();
+    const isActiveMatch = isSearchActive && matchIndexes.length > 0 && matchIndexes[currentMatchIndex] === index;
+    return (
+      <MessageItem
+        item={item}
+        isDark={isDark}
+        isSearchActive={isSearchActive}
+        searchQuery={searchQuery}
+        onImagePress={setSelectedImage}
+        isActiveMatch={isActiveMatch}
+      />
+    );
+  }, [isDark, isSearchActive, searchQuery, currentMatchIndex, messages, getMatchIndexes]);
 
   const getFilteredMessages = () => {
-    if (isSearchActive && searchQuery.trim()) {
-      return messages.filter(m => m.text.toLowerCase().includes(searchQuery.toLowerCase()));
-    }
     return messages;
   };
 
@@ -1038,6 +1089,10 @@ function useChatStateAndHandlers({
     searchQuery,
     setSearchQuery,
     keyboardVisible,
+    currentMatchIndex,
+    handleSearchNext,
+    handleSearchPrev,
+    matchCount: getMatchIndexes().length,
     selectedImage,
     setSelectedImage,
     inputText,
@@ -1097,6 +1152,10 @@ export default function ChatTab({
     searchQuery,
     setSearchQuery,
     keyboardVisible,
+    currentMatchIndex,
+    handleSearchNext,
+    handleSearchPrev,
+    matchCount,
     selectedImage,
     setSelectedImage,
     inputText,
@@ -1176,6 +1235,10 @@ export default function ChatTab({
         language={language}
         value={searchQuery}
         onChange={setSearchQuery}
+        onNext={handleSearchNext}
+        onPrev={handleSearchPrev}
+        currentMatch={currentMatchIndex + 1}
+        matchCount={matchCount}
       />
 
       <FlatList
@@ -1188,6 +1251,15 @@ export default function ChatTab({
         maxToRenderPerBatch={10}
         windowSize={10}
         removeClippedSubviews={Platform.OS === 'android'}
+        onScrollToIndexFailed={(info) => {
+          flatListRef.current?.scrollToOffset({
+            offset: info.averageItemLength * info.index,
+            animated: true,
+          });
+          setTimeout(() => {
+            flatListRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.5 });
+          }, 100);
+        }}
       />
 
       <ChatLoadingView
@@ -1395,6 +1467,11 @@ const styles = StyleSheet.create({
     color: '#0ea5e9',
     fontWeight: 'bold',
   },
+  highlightActive: {
+    backgroundColor: '#eab308',
+    color: '#000000',
+    fontWeight: 'bold',
+  },
   markdownDivider: {
     height: 1,
     backgroundColor: '#cbd5e1',
@@ -1449,7 +1526,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 8,
-    maxWidth: 200,
+    width: 180,
   },
   attachmentPreviewPdfName: {
     fontSize: 12,
@@ -1771,7 +1848,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 8,
     gap: 10,
-    maxWidth: 220,
+    width: 200,
   },
   pdfMessageInfo: {
     flex: 1,

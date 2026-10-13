@@ -118,18 +118,6 @@ mentora-project/
 
 ---
 
-## 👥 Tim Pengembang
-
-> Dibuat dengan ❤️ oleh **Muhamad Zaldi Aprialdi**
-
----
-
-## 📄 License
-
-Project ini menggunakan lisensi [MIT](LICENSE).
-
----
-
 <div align="center">
 <sub>⭐ Kalau project ini bermanfaat, jangan lupa kasih bintang!</sub>
 </div>

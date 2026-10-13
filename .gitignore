@@ -39,3 +39,17 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+Thumbs.db
+desktop.ini
+
+# Sensitive
+google-services.json
+GoogleService-Info.plist
+*.env
+.env

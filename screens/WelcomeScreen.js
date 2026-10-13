@@ -14,7 +14,7 @@ export default function WelcomeScreen({ onNext, language = 'id', changeLanguage 
   return (
     <View style={[styles.container, styles.skyBlueBg]}>
       <StatusBar barStyle="light-content" backgroundColor="#0ea5e9" translucent={true} />
-      
+    
       <TouchableOpacity 
         style={styles.langButton} 
         onPress={() => changeLanguage(language === 'id' ? 'en' : 'id')}
